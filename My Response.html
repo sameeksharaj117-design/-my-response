@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<!-- saved from url=(0032)http://127.0.0.1:5500/index.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Response</title>
+<style>
+  :root {
+    --bg: #faf7f5;
+    --card: #ffffff;
+    --ink: #2b2320;
+    --muted: #8a7f78;
+    --accent: #b5654a;
+    --accent-soft: #f1e2dc;
+    --line: #ece4df;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    font-family: 'Georgia', 'Iowan Old Style', serif;
+    color: var(--ink);
+    padding: 24px;
+  }
+  .card {
+    background: var(--card);
+    max-width: 480px;
+    width: 100%;
+    border-radius: 18px;
+    padding: 40px 32px;
+    box-shadow: 0 20px 50px rgba(80, 50, 30, 0.08);
+    text-align: center;
+    border: 1px solid var(--line);
+  }
+  .icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 24px;
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+  p.message {
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 16px;
+    margin: 0 0 28px;
+  }
+  .form-area {
+    text-align: left;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: -apple-system, sans-serif;
+  }
+  textarea {
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    font-family: -apple-system, sans-serif;
+    font-size: 14px;
+    resize: vertical;
+    color: var(--ink);
+    background: #fffdfc;
+  }
+  textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  button {
+    margin-top: 14px;
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 13px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: -apple-system, sans-serif;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  button:hover { opacity: 0.9; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .done {
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-family: -apple-system, sans-serif;
+    font-size: 14px;
+  }
+  .skip {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: -apple-system, sans-serif;
+    cursor: pointer;
+    text-decoration: underline;
+    background: none;
+    border: none;
+    width: auto;
+    padding: 4px;
+  }
+
+  /* Admin view */
+  .admin-wrap {
+    max-width: 680px;
+    width: 100%;
+  }
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    font-family: -apple-system, sans-serif;
+  }
+  .admin-header h1 { font-size: 20px; }
+  .entry {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    font-family: -apple-system, sans-serif;
+  }
+  .entry .time {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .entry .text {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  .empty {
+    color: var(--muted);
+    text-align: center;
+    padding: 40px 0;
+    font-family: -apple-system, sans-serif;
+  }
+  .back-link {
+    display: inline-block;
+    margin-top: 20px;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: -apple-system, sans-serif;
+  }
+</style>
+</head>
+<body>
+  <div id="root">
+    <div class="card">
+      <div class="icon">🙏</div>
+      <h1>Thank you for thinking of me</h1>
+      <p class="message">
+        I really appreciate you reaching out, and I don't take it lightly.
+        After thinking it over, I don't think this is something I want to pursue right now.
+        I wish you all the best.
+      </p>
+      <div class="form-area" id="formArea">
+        <label for="msg">Want to leave a reply? (optional)</label>
+        <textarea id="msg" placeholder="Type here if you&#39;d like to say something..."></textarea>
+        <button id="sendBtn">Send</button>
+        <button class="skip" id="skipBtn">Skip, just close this</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const STORAGE_PREFIX = "response_entries:";
+
+function isAdmin() {
+  return new URLSearchParams(window.location.search).get('admin') === 'true';
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function saveEntry(text) {
+  const id = Date.now().toString();
+  const entry = {
+    text: text || "(no message left)",
+    timestamp: new Date().toISOString()
+  };
+  try {
+    await window.storage.set(STORAGE_PREFIX + id, JSON.stringify(entry), true);
+    return true;
+  } catch (e) {
+    console.error("Storage error:", e);
+    return false;
+  }
+}
+
+async function loadEntries() {
+  try {
+    const list = await window.storage.list(STORAGE_PREFIX, true);
+    if (!list || !list.keys || list.keys.length === 0) return [];
+    const entries = [];
+    for (const key of list.keys) {
+      try {
+        const result = await window.storage.get(key, true);
+        if (result) entries.push(JSON.parse(result.value));
+      } catch (e) { /* skip missing */ }
+    }
+    entries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return entries;
+  } catch (e) {
+    console.error("Load error:", e);
+    return [];
+  }
+}
+
+function renderResponsePage() {
+  const root = document.getElementById('root');
+  root.innerHTML = `
+    <div class="card">
+      <div class="icon">🙏</div>
+      <h1>Thank you for thinking of me</h1>
+      <p class="message">
+        I really appreciate you reaching out, and I don't take it lightly.
+        After thinking it over, I don't think this is something I want to pursue right now.
+        I wish you all the best.
+      </p>
+      <div class="form-area" id="formArea">
+        <label for="msg">Want to leave a reply? (optional)</label>
+        <textarea id="msg" placeholder="Type here if you'd like to say something..."></textarea>
+        <button id="sendBtn">Send</button>
+        <button class="skip" id="skipBtn">Skip, just close this</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('sendBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('sendBtn');
+    const text = document.getElementById('msg').value.trim();
+    btn.disabled = true;
+    btn.textContent = "Sending...";
+    await saveEntry(text);
+    showThankYou();
+  });
+
+  document.getElementById('skipBtn').addEventListener('click', async () => {
+    await saveEntry("");
+    showThankYou();
+  });
+}
+
+function showThankYou() {
+  document.getElementById('formArea').innerHTML = `
+    <div class="done">Got it — thanks for reading. Take care. 💛</div>
+  `;
+}
+
+async function renderAdminPage() {
+  const root = document.getElementById('root');
+  root.innerHTML = `<div class="admin-wrap"><div class="admin-header"><h1>Responses</h1></div><div id="entriesList" class="empty">Loading...</div></div>`;
+
+  const entries = await loadEntries();
+  const listEl = document.getElementById('entriesList');
+
+  if (entries.length === 0) {
+    listEl.className = 'empty';
+    listEl.textContent = 'No one has responded yet.';
+    return;
+  }
+
+  listEl.className = '';
+  listEl.innerHTML = entries.map(e => `
+    <div class="entry">
+      <div class="time">${new Date(e.timestamp).toLocaleString()}</div>
+      <div class="text">${escapeHtml(e.text)}</div>
+    </div>
+  `).join('') + `<a class="back-link" href="${window.location.pathname}">← Back to page</a>`;
+}
+
+if (isAdmin()) {
+  renderAdminPage();
+} else {
+  renderResponsePage();
+}
+</script>
+<!-- Code injected by live-server -->
+<script>
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function () {
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var parent = elem.parentElement || head;
+					parent.removeChild(elem);
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+					}
+					parent.appendChild(elem);
+				}
+			}
+			var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+			var address = protocol + window.location.host + window.location.pathname + '/ws';
+			var socket = new WebSocket(address);
+			socket.onmessage = function (msg) {
+				if (msg.data == 'reload') window.location.reload();
+				else if (msg.data == 'refreshcss') refreshCSS();
+			};
+			if (sessionStorage && !sessionStorage.getItem('IsThisFirstTime_Log_From_LiveServer')) {
+				console.log('Live reload enabled.');
+				sessionStorage.setItem('IsThisFirstTime_Log_From_LiveServer', true);
+			}
+		})();
+	}
+	else {
+		console.error('Upgrade your browser. This Browser is NOT supported WebSocket for Live-Reloading.');
+	}
+	// ]]>
+</script>
+
+</body></html>
